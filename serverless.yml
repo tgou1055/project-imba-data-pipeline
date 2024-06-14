@@ -17,15 +17,15 @@ custom:
   dotenv:
     include:
       - TZ_LOCAL
-  dynamoDbTable: data_pipeline_dynamodb_table
-  dynamoDbArn: !Join
-                  - ''
-                  - - 'arn:aws:dynamodb:'
-                    - !Ref 'AWS::Region'
-                    - ':'
-                    - !Ref 'AWS::AccountId'
-                    - ':table/'
-                    - ${self:custom.dynamoDbTable}
+  # dynamoDbTable: data_pipeline_dynamodb_table
+  # dynamoDbArn: !Join
+  #                 - ''
+  #                 - - 'arn:aws:dynamodb:'
+  #                   - !Ref 'AWS::Region'
+  #                   - ':'
+  #                   - !Ref 'AWS::AccountId'
+  #                   - ':table/'
+  #                   - ${self:custom.dynamoDbTable}
 provider:
   name: aws
   runtime: ${env:PYTHON_VERSION}
@@ -35,7 +35,6 @@ provider:
     name: ${env:DEPLOYMENT_BUCKET}
     maxPreviousDeploymentArtifacts: 3
   region: ${env:REGION}
-  #region: ap-southeast-2
   versionFunctions: true
   profile: de-class
 
@@ -45,19 +44,19 @@ provider:
       Action:
         - s3:*
       Resource: "*"
-    - Effect: Allow
-      Action: 
-        - dynamodb:*
-      Resource:
-        - ${self:custom.dynamoDbArn}
-    - Effect: Allow
-      Action:
-        - logs:*
-      Resource: "*"
+    # - Effect: Allow
+    #   Action: 
+    #     - dynamodb:*
+    #   Resource:
+    #     - ${self:custom.dynamoDbArn}
+    # - Effect: Allow
+    #   Action:
+    #     - logs:*
+    #   Resource: "*"
 
 # you can define service wide environment variables here
-  environment:
-    DYNAMO_TABLE: ${self:custom.dynamoDbTable}
+  # environment:
+  #   DYNAMO_TABLE: ${self:custom.dynamoDbTable}
 
 # you can add packaging information here
 package:
@@ -71,32 +70,85 @@ package:
 functions:
   dataPipeline:
     handler: data_pipeline.run
-    name: my_first_data_pipeline
-    description: "jiang ren data pipeline demo"
+    name: imba_data_pipeline
+    description: "ETL of InstaCart"
     events:
       - s3:
           bucket: ${env:EVENT_BUCKET}
           event: s3:ObjectCreated:*
           rules:
-            - prefix: csv/
+            - prefix: data/
+  
+  helloapi:
+    handler: helloapi.hello
+    events:
+      - httpApi:
+          path: /
+          method: get
 
 # you can add CloudFormation resource templates here
 resources:
-  # Description: Jang Ren data pipeline services defination
-  # Resources:
-  #   pipelineDynamoDBTable:
-  #     Type: AWS::DynamoDB::Table
-  #     Properties:
-  #       TableName: ${self:custom.dynamoDbTable}
-  #       AttributeDefinitions:
-  #         - AttributeName: id
-  #           AttributeType: S
-  #         - AttributeName: date
-  #           AttributeType: S
-  #       KeySchema:
-  #         - AttributeName: id
-  #           KeyType: HASH
-  #         - AttributeName: date
-  #           KeyType: RANGE
-  #       BillingMode: PAY_PER_REQUEST
   
+  Description: InstaCart Table Creation, Data Injection, Transformation and Sinking
+  
+  Parameters:
+    ImbaDatabaseName:
+      Type: String
+      Default: cfn_imba_database
+    ImbaAislesTableName:
+      Type: String
+      Default: aisles
+    ImbaAislesDataLocation:
+      Type: String
+      Default: s3://tgou1055-imba-sls-test-event/data/aisles/
+
+  Resources:
+    ImbaDatabase:
+      Type: AWS::Glue::Database
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseInput:
+          Name: !Ref ImbaDatabaseName
+          Description: "Glue database for imba project"
+
+    AislesTable:
+      DependsOn: ImbaDatabase
+      Type: AWS::Glue::Table
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseName: !Ref ImbaDatabaseName
+        TableInput:
+          Name: !Ref ImbaAislesTableName
+          Description: "Table containing aisle data in CSV format"
+          TableType: EXTERNAL_TABLE
+          StorageDescriptor:
+            OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+            Columns:
+            - Name: aisle_id
+              Type: bigint
+            - Name: aisle
+              Type: string
+            InputFormat: org.apache.hadoop.mapred.TextInputFormat
+            Location: !Ref ImbaAislesDataLocation
+            SerdeInfo:
+              Parameters:
+                field.delim: ","
+                skip.header.line.count: "1"
+              SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+ 
+    # pipelineDynamoDBTable:
+    #   Type: AWS::DynamoDB::Table
+    #   Properties:
+    #     TableName: ${self:custom.dynamoDbTable}
+    #     AttributeDefinitions:
+    #       - AttributeName: id
+    #         AttributeType: S
+    #       - AttributeName: date
+    #         AttributeType: S
+    #     KeySchema:
+    #       - AttributeName: id
+    #         KeyType: HASH
+    #       - AttributeName: date
+    #         KeyType: RANGE
+    #     BillingMode: PAY_PER_REQUEST
+    
