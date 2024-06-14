@@ -32,16 +32,8 @@ sudo npm update -g serverless
 serverless -v
 ```
 ```bash
-# Install serverless plugin prune
-# 1. Install with npm
-sudo npm install --save-dev serverless-prune-plugin
-# 2. Alternatively, install with the Serverless plugin command (Serverless Framework 1.22 or higher)
-cd ${PROJECT_FOLDER}
-sls plugin install -n serverless-prune-plugin
-# Install serverless python requirements
+# Install serverless plugin prunes, python-requirements, dotenv in one dev
 # https://github.com/UnitedIncome/serverless-python-requirements
 cd ${PROJECT_FOLDER}
-sls plugin install -n serverless-python-requirements
-# Install serverless dotenv plugin
-sudo npm i -D serverless-dotenv-plugin
+sudo npm install serverless-prune-plugin serverless-python-requirements serverless-dotenv-plugin --save-dev
 ```

@@ -7,6 +7,7 @@ variablesResolutionMode: 20210326
 plugins:
   - serverless-python-requirements
   - serverless-dotenv-plugin
+  - serverless-prune-plugin
 custom:
   pythonRequirements:
     dockerizePip: false
@@ -27,14 +28,16 @@ custom:
                     - ${self:custom.dynamoDbTable}
 provider:
   name: aws
-  runtime: python3.10
+  runtime: ${env:PYTHON_VERSION}
   memorySize: 256
   timeout: 300
   deploymentBucket:
     name: ${env:DEPLOYMENT_BUCKET}
     maxPreviousDeploymentArtifacts: 3
   region: ${env:REGION}
+  #region: ap-southeast-2
   versionFunctions: true
+  profile: de-class
 
 # you can add statements to the Lambda function's IAM Role here
   iamRoleStatements:
@@ -79,20 +82,21 @@ functions:
 
 # you can add CloudFormation resource templates here
 resources:
-  Description: Jang Ren data pipeline services defination
-  Resources:
-    pipelineDynamoDBTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:custom.dynamoDbTable}
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-          - AttributeName: date
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
-          - AttributeName: date
-            KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST
+  # Description: Jang Ren data pipeline services defination
+  # Resources:
+  #   pipelineDynamoDBTable:
+  #     Type: AWS::DynamoDB::Table
+  #     Properties:
+  #       TableName: ${self:custom.dynamoDbTable}
+  #       AttributeDefinitions:
+  #         - AttributeName: id
+  #           AttributeType: S
+  #         - AttributeName: date
+  #           AttributeType: S
+  #       KeySchema:
+  #         - AttributeName: id
+  #           KeyType: HASH
+  #         - AttributeName: date
+  #           KeyType: RANGE
+  #       BillingMode: PAY_PER_REQUEST
+  
