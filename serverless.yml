@@ -8,6 +8,7 @@ plugins:
   - serverless-python-requirements
   - serverless-dotenv-plugin
   - serverless-prune-plugin
+  - serverless-glue
 custom:
   pythonRequirements:
     dockerizePip: false
@@ -36,13 +37,17 @@ provider:
     maxPreviousDeploymentArtifacts: 3
   region: ${env:REGION}
   versionFunctions: true
-  profile: de-class
+  profile: default
 
 # you can add statements to the Lambda function's IAM Role here
   iamRoleStatements:
     - Effect: Allow
       Action:
         - s3:*
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - glue:*
       Resource: "*"
     # - Effect: Allow
     #   Action: 
@@ -86,6 +91,26 @@ functions:
           path: /
           method: get
 
+#Glue Jobs:
+Glue:
+  bucketDeploy: ${env:s3_bucket}
+  jobs:
+    - name: ${env:job_name}
+      scriptPath: ${env:glue_script_python_file_name}
+      type: spark
+      glueVersion: python3-4.0
+      role: ${env:glue_iam}
+      MaxConcurrentRuns: 2
+      WorkerType: Standard
+      NumberOfWorkers: 1
+      Timeout: 5
+      MaxRetries: 1
+      SupportFiles:
+        - local_path: ${env:local_path}
+          s3_bucket: ${env:s3_bucket}
+          s3_prefix: ${env:s3_prefix_glue_script}
+          execute_upload: True
+
 # you can add CloudFormation resource templates here
 resources:
   
@@ -100,7 +125,7 @@ resources:
       Default: aisles
     ImbaAislesDataLocation:
       Type: String
-      Default: s3://tgou1055-imba-sls-test-event/data/aisles/
+      Default: s3://tgou1055-sls-deployment/data/aisles/
 
   Resources:
     ImbaDatabase:
@@ -135,7 +160,8 @@ resources:
                 field.delim: ","
                 skip.header.line.count: "1"
               SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
- 
+  
+    
     # pipelineDynamoDBTable:
     #   Type: AWS::DynamoDB::Table
     #   Properties:

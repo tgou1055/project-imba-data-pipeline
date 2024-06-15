@@ -35,5 +35,5 @@ serverless -v
 # Install serverless plugin prunes, python-requirements, dotenv in one dev
 # https://github.com/UnitedIncome/serverless-python-requirements
 cd ${PROJECT_FOLDER}
-sudo npm install serverless-prune-plugin serverless-python-requirements serverless-dotenv-plugin --save-dev
+sudo npm install serverless-prune-plugin serverless-python-requirements serverless-dotenv-plugin serverless-glue --save-dev
 ```
