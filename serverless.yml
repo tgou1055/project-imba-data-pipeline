@@ -74,7 +74,7 @@ package:
 
 functions:
   dataPipeline:
-    handler: data_pipeline.run
+    handler: data_pipeline.lambda_handler
     name: imba_data_pipeline
     description: "ETL of InstaCart"
     events:

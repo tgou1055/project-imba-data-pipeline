@@ -23,12 +23,8 @@ dyf = glueContext.create_dynamic_frame.from_catalog(database = source_database, 
 #dyf.printSchema()
 df = dyf.toDF()
 
-# Filter data
-#filtered_df = df.filter(df.product_id < 21)
-
 # Write data to s3 local with parquet
 #filtered_df.write.mode("overwrite").partitionBy("department_id").parquet(target_path)
-#filtered_df.write.mode("overwrite").parquet(target_path)
 df.write.mode("overwrite").parquet(target_path)
 
 spark.stop()

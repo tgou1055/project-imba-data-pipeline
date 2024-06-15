@@ -32,7 +32,7 @@ sudo npm update -g serverless
 serverless -v
 ```
 ```bash
-# Install serverless plugin prunes, python-requirements, dotenv in one dev
+# Install serverless plugins: prunes, python-requirements, dotenv and glue in one dev
 # https://github.com/UnitedIncome/serverless-python-requirements
 cd ${PROJECT_FOLDER}
 sudo npm install serverless-prune-plugin serverless-python-requirements serverless-dotenv-plugin serverless-glue --save-dev
