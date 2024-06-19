@@ -18,15 +18,7 @@ custom:
   dotenv:
     include:
       - TZ_LOCAL
-  # dynamoDbTable: data_pipeline_dynamodb_table
-  # dynamoDbArn: !Join
-  #                 - ''
-  #                 - - 'arn:aws:dynamodb:'
-  #                   - !Ref 'AWS::Region'
-  #                   - ':'
-  #                   - !Ref 'AWS::AccountId'
-  #                   - ':table/'
-  #                   - ${self:custom.dynamoDbTable}
+
 provider:
   name: aws
   runtime: ${env:PYTHON_VERSION}
@@ -49,19 +41,14 @@ provider:
       Action:
         - glue:*
       Resource: "*"
-    # - Effect: Allow
-    #   Action: 
-    #     - dynamodb:*
-    #   Resource:
-    #     - ${self:custom.dynamoDbArn}
-    # - Effect: Allow
-    #   Action:
-    #     - logs:*
-    #   Resource: "*"
+    - Effect: Allow
+      Action:
+        - logs:*
+      Resource: "*"
+    
 
 # you can define service wide environment variables here
-  # environment:
-  #   DYNAMO_TABLE: ${self:custom.dynamoDbTable}
+  environment:
 
 # you can add packaging information here
 package:
@@ -82,7 +69,7 @@ functions:
           bucket: ${env:EVENT_BUCKET}
           event: s3:ObjectCreated:*
           rules:
-            - prefix: data/
+            - prefix: data_csv/
   
   helloapi:
     handler: helloapi.hello
@@ -111,37 +98,44 @@ Glue:
           s3_prefix: ${env:s3_prefix_glue_script}
           execute_upload: True
 
-# you can add CloudFormation resource templates here
+# Add CloudFormation resource templates here
 resources:
   
   Description: InstaCart Table Creation, Data Injection, Transformation and Sinking
   
   Parameters:
-    ImbaDatabaseName:
+    ImbaDatabaseNameCsv:
       Type: String
-      Default: cfn_imba_database
+      Default: cfn_imba_database_csv
+    ImbaDatabaseNameParquet:
+      Type: String
+      Default: cfn_imba_database_parquet
     ImbaAislesTableName:
       Type: String
       Default: aisles
-    ImbaAislesDataLocation:
+    ImbaAislesDataLocationCsv:
       Type: String
-      Default: s3://tgou1055-sls-deployment/data/aisles/
+      Default: s3://tgou1055-imba-sls-deployment/data_csv/aisles/
+    ImbaAislesDataLocationParquet:
+      Type: String
+      Default: s3://tgou1055-imba-sls-event/data_parquet/aisles/
 
   Resources:
-    ImbaDatabase:
+    # glue database for csv files
+    ImbaDatabaseCsv:
       Type: AWS::Glue::Database
       Properties:
         CatalogId: !Ref AWS::AccountId
         DatabaseInput:
-          Name: !Ref ImbaDatabaseName
+          Name: !Ref ImbaDatabaseNameCsv
           Description: "Glue database for imba project"
 
-    AislesTable:
-      DependsOn: ImbaDatabase
+    AislesTableCsv:
+      DependsOn: ImbaDatabaseCsv
       Type: AWS::Glue::Table
       Properties:
         CatalogId: !Ref AWS::AccountId
-        DatabaseName: !Ref ImbaDatabaseName
+        DatabaseName: !Ref ImbaDatabaseNameCsv
         TableInput:
           Name: !Ref ImbaAislesTableName
           Description: "Table containing aisle data in CSV format"
@@ -154,27 +148,49 @@ resources:
             - Name: aisle
               Type: string
             InputFormat: org.apache.hadoop.mapred.TextInputFormat
-            Location: !Ref ImbaAislesDataLocation
+            Location: !Ref ImbaAislesDataLocationCsv
             SerdeInfo:
               Parameters:
                 field.delim: ","
                 skip.header.line.count: "1"
               SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-  
+
+    # glue database for parquet files
+    ImbaDatabaseParquet:
+      Type: AWS::Glue::Database
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseInput:
+          Name: !Ref ImbaDatabaseNameParquet
+          Description: "Glue database for imba project"
+
     
-    # pipelineDynamoDBTable:
-    #   Type: AWS::DynamoDB::Table
-    #   Properties:
-    #     TableName: ${self:custom.dynamoDbTable}
-    #     AttributeDefinitions:
-    #       - AttributeName: id
-    #         AttributeType: S
-    #       - AttributeName: date
-    #         AttributeType: S
-    #     KeySchema:
-    #       - AttributeName: id
-    #         KeyType: HASH
-    #       - AttributeName: date
-    #         KeyType: RANGE
-    #     BillingMode: PAY_PER_REQUEST
-    
+    AislesTableParquet:
+      DependsOn: ImbaDatabaseParquet
+      Type: AWS::Glue::Table
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseName: !Ref ImbaDatabaseParquet
+        TableInput:
+          Name: !Ref ImbaAislesTableName
+          Description: "Glue table for Parquet data"
+          TableType: "EXTERNAL_TABLE"
+          Parameters:
+            classification: "parquet"
+            EXTERNAL: "TRUE"
+          StorageDescriptor:
+            Columns:
+              - Name: aisle_id
+                Type: bigint
+              - Name: aisle
+                Type: string
+            Location: !Ref ImbaAislesDataLocationParquet
+            InputFormat: "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
+            OutputFormat: "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+            Compressed: false
+            NumberOfBuckets: -1
+            SerdeInfo:
+              SerializationLibrary: "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+              Parameters:
+                serialization.format: "1"
+            StoredAsSubDirectories: false
